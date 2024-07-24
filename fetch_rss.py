@@ -1,30 +1,46 @@
-import feedparser
 import requests
+import xml.etree.ElementTree as ET
+from datetime import datetime
 
-# 定义要抓取的 RSS 源
-RSS_URL = "https://news.google.com/rss"
+# RSS 源地址
+RSS_URL = 'https://news.google.com/rss'
 
-# 抓取 RSS 数据
+# 请求 RSS 源
 response = requests.get(RSS_URL)
-rss_data = response.text
+response.raise_for_status()  # 确保请求成功
 
-# 解析 RSS 数据
-feed = feedparser.parse(rss_data)
+# 解析 RSS XML
+root = ET.fromstring(response.content)
 
-# 创建/更新 feed.xml 文件
-with open("feed.xml", "w", encoding="utf-8") as file:
-    file.write("<rss version='2.0'>\n")
-    file.write("<channel>\n")
-    file.write(f"<title>{feed.feed.title}</title>\n")
-    file.write(f"<link>{feed.feed.link}</link>\n")
-    file.write(f"<description>{feed.feed.description}</description>\n")
+# 创建 feed.xml 文件
+def create_feed(items):
+    with open('feed.xml', 'w', encoding='utf-8') as file:
+        file.write("""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Google News Feed</title>
+    <link>https://news.google.com/</link>
+    <description>Latest headlines from Google News</description>
+""")
+        for item in items:
+            # 转义特殊字符
+            title = item.find('title').text
+            link = item.find('link').text
+            description = item.find('description').text
+            description = description.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            
+            file.write(f"""
+    <item>
+      <title>{title}</title>
+      <link>{link}</link>
+      <description>{description}</description>
+      <pubDate>{item.find('pubDate').text}</pubDate>
+    </item>
+""")
+        file.write("""
+  </channel>
+</rss>""")
 
-    for entry in feed.entries:
-        file.write("<item>\n")
-        file.write(f"<title>{entry.title}</title>\n")
-        file.write(f"<link>{entry.link}</link>\n")
-        file.write(f"<description>{entry.description}</description>\n")
-        file.write("</item>\n")
-
-    file.write("</channel>\n")
-    file.write("</rss>\n")
+# 获取 RSS 频道中的项
+items = root.find('channel').findall('item')
+create_feed(items)
