@@ -1,5 +1,7 @@
 import requests
 import xml.etree.ElementTree as ET
+from xml.sax.saxutils import escape
+import os
 
 # 中文 RSS 源地址
 RSS_URL = 'https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans'
@@ -15,43 +17,32 @@ root = ET.fromstring(response.content)
 def create_feed(items):
     with open('feed.xml', 'w', encoding='utf-8') as file:
         file.write("""<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0">
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Google News Feed - 中文</title>
     <link>https://news.google.com/</link>
     <description>Google 新闻中文最新头条</description>
-    <atom:link href="https://your-username.github.io/your-repo-name/feed.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="https://github.com/andersonball/some_rss/feed.xml" rel="self" type="application/rss+xml"/>
 """)
         for item in items:
-            # 转义特殊字符
-            title = escape_xml(item.find('title').text)
-            link = escape_xml(item.find('link').text)
-            description = escape_xml(item.find('description').text)
+            title = escape(item.find('title').text or '')
+            link = escape(item.find('link').text or '')
+            description = escape(item.find('description').text or '')
             pub_date = item.find('pubDate').text if item.find('pubDate') is not None else '无日期'
-            guid = escape_xml(item.find('link').text)
+            guid = escape(item.find('link').text or '')
 
             file.write(f"""
     <item>
       <title>{title}</title>
       <link>{link}</link>
-      <description>{description}</description>
-      <guid>{guid}</guid>
+      <description><![CDATA[{description}]]></description>
       <pubDate>{pub_date}</pubDate>
+      <guid>{guid}</guid>
     </item>
 """)
         file.write("""
   </channel>
 </rss>""")
-
-def escape_xml(text):
-    """Escape special XML characters."""
-    if text:
-        text = (text.replace('&', '&amp;')
-                  .replace('<', '&lt;')
-                  .replace('>', '&gt;')
-                  .replace('"', '&quot;')
-                  .replace("'", '&apos;'))
-    return text
 
 # 获取 RSS 频道中的项
 items = root.find('channel').findall('item')
