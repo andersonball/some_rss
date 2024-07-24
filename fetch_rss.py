@@ -2,7 +2,7 @@ import requests
 import xml.etree.ElementTree as ET
 
 # RSS 源地址
-RSS_URL = 'https://news.google.com/rss'
+RSS_URL = 'https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans'
 
 # 请求 RSS 源
 response = requests.get(RSS_URL)
