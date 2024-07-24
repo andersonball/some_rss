@@ -20,6 +20,7 @@ def create_feed(items):
     <title>Google News Feed - 中文</title>
     <link>https://news.google.com/</link>
     <description>Google 新闻中文最新头条</description>
+    <atom:link href="https://your-username.github.io/your-repo-name/feed.xml" rel="self" type="application/rss+xml" />
 """)
         for item in items:
             # 转义特殊字符
@@ -27,12 +28,14 @@ def create_feed(items):
             link = escape_xml(item.find('link').text)
             description = escape_xml(item.find('description').text)
             pub_date = item.find('pubDate').text if item.find('pubDate') is not None else '无日期'
+            guid = escape_xml(item.find('link').text)
 
             file.write(f"""
     <item>
       <title>{title}</title>
       <link>{link}</link>
       <description>{description}</description>
+      <guid>{guid}</guid>
       <pubDate>{pub_date}</pubDate>
     </item>
 """)
