@@ -1,8 +1,8 @@
 import requests
 import xml.etree.ElementTree as ET
 
-# RSS 源地址
-RSS_URL = 'https://news.google.com/rss'
+# 中文 RSS 源地址
+RSS_URL = 'https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans'
 
 # 请求 RSS 源
 response = requests.get(RSS_URL)
@@ -17,16 +17,16 @@ def create_feed(items):
         file.write("""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
-    <title>Google News Feed</title>
+    <title>Google News Feed - 中文</title>
     <link>https://news.google.com/</link>
-    <description>Latest headlines from Google News</description>
+    <description>Google 新闻中文最新头条</description>
 """)
         for item in items:
             # 转义特殊字符
             title = escape_xml(item.find('title').text)
             link = escape_xml(item.find('link').text)
             description = escape_xml(item.find('description').text)
-            pub_date = item.find('pubDate').text if item.find('pubDate') is not None else 'No Date'
+            pub_date = item.find('pubDate').text if item.find('pubDate') is not None else '无日期'
 
             file.write(f"""
     <item>
