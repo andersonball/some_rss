@@ -1,7 +1,6 @@
 import requests
 import xml.etree.ElementTree as ET
 from xml.sax.saxutils import escape
-import os
 
 # 中文 RSS 源地址
 RSS_URL = 'https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans'
@@ -17,12 +16,11 @@ root = ET.fromstring(response.content)
 def create_feed(items):
     with open('feed.xml', 'w', encoding='utf-8') as file:
         file.write("""<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<rss version="2.0">
   <channel>
     <title>Google News Feed - 中文</title>
     <link>https://news.google.com/</link>
     <description>Google 新闻中文最新头条</description>
-    <atom:link href="https://github.com/andersonball/some_rss/feed.xml" rel="self" type="application/rss+xml"/>
 """)
         for item in items:
             title = escape(item.find('title').text or '')
