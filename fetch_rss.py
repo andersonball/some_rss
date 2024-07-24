@@ -2,7 +2,7 @@ import requests
 import xml.etree.ElementTree as ET
 
 # RSS 源地址
-RSS_URL = 'https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans'
+RSS_URL = 'https://news.google.com/rss'
 
 # 请求 RSS 源
 response = requests.get(RSS_URL)
@@ -23,15 +23,9 @@ def create_feed(items):
 """)
         for item in items:
             # 转义特殊字符
-            title = item.find('title').text
-            link = item.find('link').text
-            description = item.find('description').text
-            description = (description.replace('&', '&amp;')
-                                       .replace('<', '&lt;')
-                                       .replace('>', '&gt;')
-                                       .replace('"', '&quot;')
-                                       .replace("'", '&apos;'))
-            
+            title = escape_xml(item.find('title').text)
+            link = escape_xml(item.find('link').text)
+            description = escape_xml(item.find('description').text)
             pub_date = item.find('pubDate').text if item.find('pubDate') is not None else 'No Date'
 
             file.write(f"""
@@ -45,3 +39,17 @@ def create_feed(items):
         file.write("""
   </channel>
 </rss>""")
+
+def escape_xml(text):
+    """Escape special XML characters."""
+    if text:
+        text = (text.replace('&', '&amp;')
+                  .replace('<', '&lt;')
+                  .replace('>', '&gt;')
+                  .replace('"', '&quot;')
+                  .replace("'", '&apos;'))
+    return text
+
+# 获取 RSS 频道中的项
+items = root.find('channel').findall('item')
+create_feed(items)
