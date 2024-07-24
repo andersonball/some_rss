@@ -29,8 +29,8 @@ jobs:
 
     - name: Configure Git
       run: |
-        git config user.name "GitHub Actions"
-        git config user.email "actions@github.com"
+        git config user.name andersonball
+        git config user.email freeanderson2020@gmail.com
 
     - name: Commit and push feed.xml
       run: |
