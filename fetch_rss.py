@@ -1,6 +1,5 @@
 import requests
 import xml.etree.ElementTree as ET
-from datetime import datetime
 
 # RSS 源地址
 RSS_URL = 'https://news.google.com/rss'
@@ -27,20 +26,22 @@ def create_feed(items):
             title = item.find('title').text
             link = item.find('link').text
             description = item.find('description').text
-            description = description.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            description = (description.replace('&', '&amp;')
+                                       .replace('<', '&lt;')
+                                       .replace('>', '&gt;')
+                                       .replace('"', '&quot;')
+                                       .replace("'", '&apos;'))
             
+            pub_date = item.find('pubDate').text if item.find('pubDate') is not None else 'No Date'
+
             file.write(f"""
     <item>
       <title>{title}</title>
       <link>{link}</link>
       <description>{description}</description>
-      <pubDate>{item.find('pubDate').text}</pubDate>
+      <pubDate>{pub_date}</pubDate>
     </item>
 """)
         file.write("""
   </channel>
 </rss>""")
-
-# 获取 RSS 频道中的项
-items = root.find('channel').findall('item')
-create_feed(items)
