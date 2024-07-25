@@ -1,21 +1,36 @@
 import requests
 import xml.etree.ElementTree as ET
 from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
 from urllib.parse import urljoin
+import time
 
-# 获取实际新闻 URL
+# 获取实际新闻 URL 使用 Selenium
 def fetch_real_news_url(google_news_url):
     try:
-        response = requests.get(google_news_url)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, 'html.parser')
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")  # 无头模式
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--no-sandbox")
+
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+        driver.get(google_news_url)
+        
+        # 等待页面加载
+        time.sleep(5)
+        
+        soup = BeautifulSoup(driver.page_source, 'html.parser')
+        driver.quit()
         
         # 根据网页结构提取实际的新闻 URL
         for link in soup.find_all('a', href=True):
             href = link['href']
             if 'example.com' in href:  # 使用实际新闻源域名替换
                 return urljoin(google_news_url, href)
-    except requests.exceptions.RequestException as e:
+    except Exception as e:
         print(f"Error fetching real URL for {google_news_url}: {e}")
     
     # 如果未找到实际 URL，返回原 URL
