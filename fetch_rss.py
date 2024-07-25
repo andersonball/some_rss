@@ -1,6 +1,7 @@
 import requests
 import xml.etree.ElementTree as ET
 from xml.sax.saxutils import escape
+from xml.dom import minidom
 
 # 中文 RSS 源地址
 RSS_URL = 'https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans'
@@ -42,10 +43,18 @@ def create_feed(items, filename='feed.xml'):
 
         ET.SubElement(item_element, 'pubDate').text = pub_date
 
-    # 创建 ElementTree 对象并写入文件
+    # 创建 ElementTree 对象
     tree = ET.ElementTree(rss)
-    with open(filename, 'wb') as file:
-        tree.write(file, encoding='utf-8', xml_declaration=True)
+    
+    # 将 XML 写入字符串
+    xml_str = ET.tostring(rss, encoding='utf-8', method='xml').decode()
+    
+    # 使用 minidom 进行格式化
+    pretty_xml_str = minidom.parseString(xml_str).toprettyxml(indent="  ")
+    
+    # 写入文件
+    with open(filename, 'w', encoding='utf-8') as file:
+        file.write(pretty_xml_str)
 
 # 获取 RSS 频道中的项
 items = root.find('channel').findall('item')
