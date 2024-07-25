@@ -1,65 +1,75 @@
 import requests
 import xml.etree.ElementTree as ET
-from xml.sax.saxutils import escape
-from xml.dom import minidom
+from bs4 import BeautifulSoup
+import re
 
-# 中文 RSS 源地址
-RSS_URL = 'https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans'
-
-# 请求 RSS 源
-response = requests.get(RSS_URL)
-response.raise_for_status()  # 确保请求成功
-
-# 解析 RSS XML
-root = ET.fromstring(response.content)
-
-def escape_xml_chars(data):
-    """ 转义 XML 中的特殊字符 """
-    return escape(data)
-
-# 创建 feed.xml 文件
-def create_feed(items, filename='feed.xml'):
-    feed_url = 'https://andersonball.github.io/some_rss/feed.xml'
-
-    # 创建 XML 树的根节点
-    rss = ET.Element('rss', version="2.0", xmlns_atom="http://www.w3.org/2005/Atom")
-    channel = ET.SubElement(rss, 'channel')
-    ET.SubElement(channel, 'title').text = "Gooooo News Feed - 中文"
-    ET.SubElement(channel, 'link').text = feed_url
-    ET.SubElement(channel, 'description').text = "Google 新闻中文最新头条"
-    ET.SubElement(channel, 'atom:link', href=feed_url, rel="self", type="application/rss+xml")
-
-    for item in items:
-        # 创建 item 元素
-        item_element = ET.SubElement(channel, 'item')
-        title = escape_xml_chars(item.find('title').text or '')
-        description = escape_xml_chars(item.find('description').text or '')
-        pub_date = item.find('pubDate').text if item.find('pubDate') is not None else '无日期'
-
-        ET.SubElement(item_element, 'title').text = title
-        # 使用 CDATA 区域处理 description 内容
-        description_element = ET.SubElement(item_element, 'description')
-        description_element.text = description
-
-        ET.SubElement(item_element, 'pubDate').text = pub_date
-
-    # 创建 ElementTree 对象
-    tree = ET.ElementTree(rss)
+def fetch_and_convert_feed():
+    # 从 Google 新闻 RSS 读取
+    RSS_URL = 'https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans'
+    response = requests.get(RSS_URL)
+    response.raise_for_status()
     
-    # 将 XML 写入字符串
-    xml_str = ET.tostring(rss, encoding='utf-8', method='xml').decode()
+    # 解析 RSS XML
+    root = ET.fromstring(response.content)
     
-    # 使用 minidom 进行格式化
-    pretty_xml_str = minidom.parseString(xml_str).toprettyxml(indent="  ")
+    # 处理每个 item
+    items = []
+    for item in root.findall('channel/item'):
+        title = item.find('title').text
+        link = item.find('link').text
+        description = item.find('description').text
+        pub_date = item.find('pubDate').text
+
+        # 提取实际链接并修改描述内容
+        soup = BeautifulSoup(description, 'html.parser')
+        links = soup.find_all('a', href=True)
+        for link in links:
+            url = link['href']
+            # 替换 Google News 相关链接
+            if 'news.google.com' in url:
+                real_url = convert_to_real_url(url)
+                link['href'] = real_url
+        
+        description_modified = str(soup)
+        items.append({
+            'title': title,
+            'link': link,
+            'description': description_modified,
+            'pubDate': pub_date
+        })
     
-    # 写入文件
+    return items
+
+def convert_to_real_url(url):
+    # 在此函数中进行实际链接转换的逻辑
+    # 例如，使用一些库或者API获取实际链接
+    return url.replace('news.google.com', 'real-news-source.com')  # 示例替换逻辑
+
+def create_new_feed(items, filename='feed.xml'):
     with open(filename, 'w', encoding='utf-8') as file:
-        file.write(pretty_xml_str)
+        file.write("""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Updated News Feed</title>
+    <link>https://example.com/feed</link>
+    <description>Updated news feed with real links</description>
+""")
+        for item in items:
+            file.write(f"""
+    <item>
+      <title>{item['title']}</title>
+      <link>{item['link']}</link>
+      <description><![CDATA[{item['description']}]]></description>
+      <pubDate>{item['pubDate']}</pubDate>
+    </item>
+""")
+        file.write("""
+  </channel>
+</rss>""")
 
-# 获取 RSS 频道中的项
-items = root.find('channel').findall('item')
-create_feed(items)
+def main():
+    items = fetch_and_convert_feed()
+    create_new_feed(items)
 
-print("feed.xml 文件已生成，内容如下：")
-with open('feed.xml', 'r', encoding='utf-8') as f:
-    print(f.read())
+if __name__ == "__main__":
+    main()
