@@ -16,21 +16,23 @@ root = ET.fromstring(response.content)
 def create_feed(items, filename='feed.xml'):
     feed_url = 'https://andersonball.github.io/some_rss/feed.xml'  # 替换为你自己的 feed URL
     with open(filename, 'w', encoding='utf-8') as file:
+        # 写入 XML 头部及命名空间声明
         file.write("""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Goooo News Feed - 中文</title>
-    <link>https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans/</link>
+    <title>Gooooo News Feed - 中文</title>
+    <link>https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans</link>
     <description>Google 新闻中文最新头条</description>
     <atom:link href="https://andersonball.github.io/some_rss/feed.xml" rel="self" type="application/rss+xml" />
 """)
         for item in items:
             title = escape(item.find('title').text or '')
             link = escape(item.find('link').text or '')
-            description = escape(item.find('description').text or '')
+            description = item.find('description').text or ''
             pub_date = item.find('pubDate').text if item.find('pubDate') is not None else '无日期'
             guid = escape(item.find('link').text or '')
 
+            # 使用 CDATA 区域包裹 description，以避免处理其中的特殊字符
             file.write(f"""
     <item>
       <title>{title}</title>
@@ -40,6 +42,7 @@ def create_feed(items, filename='feed.xml'):
       <guid>{guid}</guid>
     </item>
 """)
+        # 结束 XML 文件
         file.write("""
   </channel>
 </rss>""")
