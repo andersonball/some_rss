@@ -3,7 +3,6 @@ import asyncio
 import xml.etree.ElementTree as ET
 from bs4 import BeautifulSoup
 from aiohttp import ClientSession
-from urllib.parse import urlparse, parse_qs
 
 # 中文 RSS 源地址
 RSS_URL = 'https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans'
@@ -22,7 +21,10 @@ async def get_redirected_url(session, url):
     """ 从 Google News 链接中获取实际的新闻源链接 """
     html = await fetch(session, url)
     if html:
-        return url  # 这里假设原链接为最终链接，可以进一步优化
+        soup = BeautifulSoup(html, 'lxml')
+        link_tag = soup.find('meta', property='og:url')
+        if link_tag:
+            return link_tag.get('content')
     return url
 
 async def extract_actual_link(session, description):
@@ -36,7 +38,7 @@ async def extract_actual_link(session, description):
             tasks.append(get_redirected_url(session, href))
     results = await asyncio.gather(*tasks)
     for result in results:
-        if result and result != href:
+        if result:
             return result
     return ''
 
