@@ -4,13 +4,16 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 from urllib.parse import urljoin
-import time
 
 # 获取实际新闻 URL 使用 Selenium
 def fetch_real_news_url(google_news_url):
     try:
+        print(f"Fetching: {google_news_url}")
         chrome_options = Options()
         chrome_options.add_argument("--headless")  # 无头模式
         chrome_options.add_argument("--disable-gpu")
@@ -18,10 +21,11 @@ def fetch_real_news_url(google_news_url):
 
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
         driver.get(google_news_url)
-        
-        # 等待页面加载
-        time.sleep(5)
-        
+
+        # 等待直到页面中的一个特定元素加载完成
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, 'a')))
+        print("Page loaded")
+
         soup = BeautifulSoup(driver.page_source, 'html.parser')
         driver.quit()
         
@@ -29,6 +33,7 @@ def fetch_real_news_url(google_news_url):
         for link in soup.find_all('a', href=True):
             href = link['href']
             if 'example.com' in href:  # 使用实际新闻源域名替换
+                print(f"Found URL: {href}")
                 return urljoin(google_news_url, href)
     except Exception as e:
         print(f"Error fetching real URL for {google_news_url}: {e}")
