@@ -12,6 +12,11 @@ response.raise_for_status()  # 确保请求成功
 # 解析 RSS XML
 root = ET.fromstring(response.content)
 
+def escape_cdata(data):
+    """ 处理可能的 CDATA 区域中的特殊字符 """
+    # 替换 CDATA 中的 "]]>" 为 "]]]]><![CDATA[>"
+    return data.replace(']]>', ']]]]><![CDATA[>')
+
 # 创建 feed.xml 文件
 def create_feed(items, filename='feed.xml'):
     feed_url = 'https://andersonball.github.io/some_rss/feed.xml'  # 替换为你自己的 feed URL
@@ -35,8 +40,9 @@ def create_feed(items, filename='feed.xml'):
 
             # 使用 CDATA 区域包裹 description，以避免处理其中的特殊字符
             # 确保 description 中的特殊字符不引起解析问题
-            description_cdata = f"<![CDATA[{description}]]>"
+            description_cdata = escape_cdata(f"<![CDATA[{description}]]>")
 
+            # 写入每个 item
             file.write(f"""
     <item>
       <title>{title}</title>
