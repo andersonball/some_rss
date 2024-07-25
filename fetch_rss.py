@@ -1,7 +1,6 @@
 import requests
 import xml.etree.ElementTree as ET
 from bs4 import BeautifulSoup
-import re
 
 def fetch_and_convert_feed():
     # 从 Google 新闻 RSS 读取
@@ -20,17 +19,12 @@ def fetch_and_convert_feed():
         description = item.find('description').text
         pub_date = item.find('pubDate').text
 
-        # 提取实际链接并修改描述内容
+        # 使用 BeautifulSoup 解析 description
         soup = BeautifulSoup(description, 'html.parser')
-        links = soup.find_all('a', href=True)
-        for link in links:
-            url = link['href']
-            # 替换 Google News 相关链接
-            if 'news.google.com' in url:
-                real_url = convert_to_real_url(url)
-                link['href'] = real_url
         
+        # 生成修改后的描述
         description_modified = str(soup)
+        
         items.append({
             'title': title,
             'link': link,
@@ -40,11 +34,6 @@ def fetch_and_convert_feed():
     
     return items
 
-def convert_to_real_url(url):
-    # 在此函数中进行实际链接转换的逻辑
-    # 例如，使用一些库或者API获取实际链接
-    return url.replace('news.google.com', 'real-news-source.com')  # 示例替换逻辑
-
 def create_new_feed(items, filename='feed.xml'):
     with open(filename, 'w', encoding='utf-8') as file:
         file.write("""<?xml version="1.0" encoding="UTF-8"?>
@@ -52,7 +41,7 @@ def create_new_feed(items, filename='feed.xml'):
   <channel>
     <title>Updated News Feed</title>
     <link>https://example.com/feed</link>
-    <description>Updated news feed with real links</description>
+    <description>Updated news feed with original links</description>
 """)
         for item in items:
             file.write(f"""
