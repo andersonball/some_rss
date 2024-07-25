@@ -13,14 +13,15 @@ response.raise_for_status()  # 确保请求成功
 root = ET.fromstring(response.content)
 
 # 创建 feed.xml 文件
-def create_feed(items):
-    with open('feed.xml', 'w', encoding='utf-8') as file:
+def create_feed(items, filename='feed.xml'):
+    with open(filename, 'w', encoding='utf-8') as file:
         file.write("""<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0">
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Google News Feed - 中文</title>
-    <link>https://news.google.com/</link>
+    <title>Goooo News Feed - 中文</title>
+    <link>https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans</link>
     <description>Google 新闻中文最新头条</description>
+    <atom:link href="https://andersonball.github.io/some_rss/feed.xml" rel="self" type="application/rss+xml" />
 """)
         for item in items:
             title = escape(item.find('title').text or '')
