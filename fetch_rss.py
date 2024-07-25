@@ -34,11 +34,14 @@ def create_feed(items, filename='feed.xml'):
             guid = escape(item.find('link').text or '')
 
             # 使用 CDATA 区域包裹 description，以避免处理其中的特殊字符
+            # 确保 description 中的特殊字符不引起解析问题
+            description_cdata = f"<![CDATA[{description}]]>"
+
             file.write(f"""
     <item>
       <title>{title}</title>
       <link>{link}</link>
-      <description><![CDATA[{description}]]></description>
+      <description>{description_cdata}</description>
       <pubDate>{pub_date}</pubDate>
       <guid>{guid}</guid>
     </item>
@@ -51,3 +54,7 @@ def create_feed(items, filename='feed.xml'):
 # 获取 RSS 频道中的项
 items = root.find('channel').findall('item')
 create_feed(items)
+
+print("feed.xml 文件已生成，内容如下：")
+with open('feed.xml', 'r', encoding='utf-8') as f:
+    print(f.read())
