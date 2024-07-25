@@ -18,9 +18,19 @@ def extract_actual_link_from_page(url):
     html = fetch_html(url)
     if html:
         soup = BeautifulSoup(html, 'lxml')
+        
+        # 尝试提取 og:url 元标签
         meta_tag = soup.find('meta', property='og:url')
-        if meta_tag:
+        if meta_tag and meta_tag.get('content'):
             return meta_tag.get('content')
+        
+        # 尝试提取常见的新闻源链接
+        # 例如可能在正文或其他标签中
+        for link in soup.find_all('a'):
+            href = link.get('href')
+            if href and 'news' in href:  # 这里的条件可能需要根据实际情况调整
+                return href
+        
     return url
 
 def escape_cdata(data):
