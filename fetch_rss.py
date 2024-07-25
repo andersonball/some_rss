@@ -5,6 +5,22 @@ from xml.sax.saxutils import escape
 # 中文 RSS 源地址
 RSS_URL = 'https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans'
 
+# 定义替换链接的函数
+def replace_google_links(original_link):
+    """
+    将谷歌新闻的链接替换为实际目标地址。
+    使用预定义的替换规则或生成目标链接。
+    """
+    replacement_dict = {
+        'https://news.google.com/rss/articles/': 'https://targetdomain.com/articles/',  # 示例替换规则
+        # 可以根据实际需要添加更多的替换规则
+    }
+    for key, value in replacement_dict.items():
+        if original_link.startswith(key):
+            # 如果找到匹配的前缀，进行替换
+            return original_link.replace(key, value)
+    return original_link
+
 # 请求 RSS 源
 response = requests.get(RSS_URL)
 response.raise_for_status()  # 确保请求成功
@@ -18,7 +34,7 @@ def escape_xml_chars(data):
 
 # 创建 feed.xml 文件
 def create_feed(items, filename='feed.xml'):
-    feed_url = 'https://andersonball.github.io/some_rss/feed.xml'  # 替换为你自己的 feed URL
+    feed_url = 'https://yourusername.github.io/some_rss/feed.xml'  # 替换为你自己的 feed URL
     with open(filename, 'w', encoding='utf-8') as file:
         # 写入 XML 头部及命名空间声明
         file.write("""<?xml version="1.0" encoding="UTF-8"?>
@@ -32,11 +48,11 @@ def create_feed(items, filename='feed.xml'):
         for item in items:
             # 获取每个字段的内容，处理可能的缺失值
             title = escape_xml_chars(item.find('title').text or '')
-            link = escape_xml_chars(item.find('link').text or '')
+            link = replace_google_links(item.find('link').text or '')
             description = item.find('description').text or ''
             pub_date = item.find('pubDate').text if item.find('pubDate') is not None else '无日期'
 
-            # 转义 description 内容中的特殊字符，而不使用 CDATA 区域
+            # 转义 description 内容中的特殊字符
             description_escaped = escape_xml_chars(description)
 
             # 写入每个 item
