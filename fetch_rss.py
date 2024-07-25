@@ -34,7 +34,7 @@ def escape_xml_chars(data):
 
 # 创建 feed.xml 文件
 def create_feed(items, filename='feed.xml'):
-    feed_url = 'https://yourusername.github.io/some_rss/feed.xml'  # 替换为你自己的 feed URL
+    feed_url = 'https://andersonball.github.io/some_rss/feed.xml'  # 替换为你自己的 feed URL
     with open(filename, 'w', encoding='utf-8') as file:
         # 写入 XML 头部及命名空间声明
         file.write("""<?xml version="1.0" encoding="UTF-8"?>
