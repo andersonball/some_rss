@@ -16,12 +16,13 @@ def extract_actual_link(description):
     links = soup.find_all('a')
     for link in links:
         href = link.get('href')
+        # 返回第一个非 Google News 链接
         if href and not href.startswith('https://news.google.com/'):
             return href
-    return ''
+    return ''  # 如果没有找到实际链接，返回空字符串
 
-# 创建 feed.xml 文件
 def create_feed(items, filename='feed.xml'):
+    """ 创建 feed.xml 文件 """
     feed_url = 'https://andersonball.github.io/some_rss/feed.xml'  # 替换为你自己的 feed URL
     with open(filename, 'w', encoding='utf-8') as file:
         # 写入 XML 头部及命名空间声明
@@ -33,6 +34,7 @@ def create_feed(items, filename='feed.xml'):
     <description>Google 新闻中文最新头条</description>
     <atom:link href="{feed_url}" rel="self" type="application/rss+xml" />
 """.format(feed_url=escape_xml_chars(feed_url)))
+        
         for item in items:
             # 获取每个字段的内容，处理可能的缺失值
             title = escape_xml_chars(item.find('title').text or '')
@@ -43,7 +45,7 @@ def create_feed(items, filename='feed.xml'):
             # 尝试从 description 中提取实际新闻链接
             actual_link = extract_actual_link(description)
             if actual_link:
-                link = actual_link
+                link = actual_link  # 替换为实际的新闻链接
 
             # 处理描述中的特殊字符（可能包含 HTML 标记）
             description = escape_xml_chars(description)
@@ -57,6 +59,7 @@ def create_feed(items, filename='feed.xml'):
       <pubDate>{pub_date}</pubDate>
     </item>
 """)
+        
         # 结束 XML 文件
         file.write("""
   </channel>
