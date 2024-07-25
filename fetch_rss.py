@@ -1,82 +1,66 @@
 import requests
 import xml.etree.ElementTree as ET
-from bs4 import BeautifulSoup
+from xml.sax.saxutils import escape
 
-def fetch_and_convert_feed():
-    RSS_URL = 'https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans'
-    try:
-        response = requests.get(RSS_URL)
-        response.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching RSS feed: {e}")
-        return []
+# 中文 RSS 源地址
+RSS_URL = 'https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans'  # 这里的 URL 是合法的，不需要转义
 
-    try:
-        root = ET.fromstring(response.content)
-    except ET.ParseError as e:
-        print(f"Error parsing RSS XML: {e}")
-        return []
+# 请求 RSS 源
+response = requests.get(RSS_URL)
+response.raise_for_status()  # 确保请求成功
 
-    items = []
-    for item in root.findall('channel/item'):
-        title = item.find('title').text if item.find('title') is not None else 'No Title'
-        link = item.find('link').text if item.find('link') is not None else 'No Link'
-        description = item.find('description').text if item.find('description') is not None else 'No Description'
-        pub_date = item.find('pubDate').text if item.find('pubDate') is not None else 'No PubDate'
+# 解析 RSS XML
+root = ET.fromstring(response.content)
 
-        # 提取实际链接并修改描述内容
-        soup = BeautifulSoup(description, 'html.parser')
-        links = soup.find_all('a', href=True)
-        for link in links:
-            url = link['href']
-            if 'news.google.com' in url:
-                real_url = convert_to_real_url(url)
-                link['href'] = real_url
-        
-        description_modified = str(soup)
-        items.append({
-            'title': title,
-            'link': link,
-            'description': description_modified,
-            'pubDate': pub_date
-        })
-    
-    return items
+def escape_cdata(data):
+    """ 处理可能的 CDATA 区域中的特殊字符 """
+    # 替换 CDATA 中的 "]]>" 为 "]]]]><![CDATA[>"
+    return data.replace(']]>', ']]]]><![CDATA[>')
 
-def convert_to_real_url(url):
-    # 在此函数中进行实际链接转换的逻辑
-    # 示例替换逻辑
-    return url.replace('news.google.com', 'real-news-source.com')  # 示例替换逻辑
+def escape_xml_chars(data):
+    """ 转义 XML 中的特殊字符 """
+    # 使用 xml.sax.saxutils.escape 来转义字符
+    return escape(data)
 
-def create_new_feed(items, filename='feed.xml'):
+# 创建 feed.xml 文件
+def create_feed(items, filename='feed.xml'):
+    feed_url = 'https://andersonball.github.io/some_rss/feed.xml'  # 替换为你自己的 feed URL
     with open(filename, 'w', encoding='utf-8') as file:
+        # 写入 XML 头部及命名空间声明
         file.write("""<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0">
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Updated News Feed</title>
-    <link>https://example.com/feed</link>
-    <description>Updated news feed with real links</description>
-""")
+    <title>Gooooo News Feed - 中文</title>
+    <link>{feed_url}</link>
+    <description>Google 新闻中文最新头条</description>
+    <atom:link href="{feed_url}" rel="self" type="application/rss+xml" />
+""".format(feed_url=escape_xml_chars(feed_url)))
         for item in items:
+            # 获取每个字段的内容，处理可能的缺失值
+            title = escape_xml_chars(item.find('title').text or '')
+            description = item.find('description').text or ''
+            pub_date = item.find('pubDate').text if item.find('pubDate') is not None else '无日期'
+
+            # 使用 CDATA 区域包裹 description，以避免处理其中的特殊字符
+            description_cdata = escape_cdata(f"<![CDATA[{description}]]>")
+
+            # 写入每个 item，去掉 <link> 和 <guid> 标签
             file.write(f"""
     <item>
-      <title>{item['title']}</title>
-      <link>{item['link']}</link>
-      <description><![CDATA[{item['description']}]]></description>
-      <pubDate>{item['pubDate']}</pubDate>
+      <title>{title}</title>
+      <description>{description_cdata}</description>
+      <pubDate>{pub_date}</pubDate>
     </item>
 """)
+        # 结束 XML 文件
         file.write("""
   </channel>
 </rss>""")
-    print(f"New feed created and saved as {filename}")
 
-def main():
-    items = fetch_and_convert_feed()
-    if items:
-        create_new_feed(items)
-    else:
-        print("No items fetched or converted. Feed creation aborted.")
+# 获取 RSS 频道中的项
+items = root.find('channel').findall('item')
+create_feed(items)
 
-if __name__ == "__main__":
-    main()
+print("feed.xml 文件已生成，内容如下：")
+with open('feed.xml', 'r', encoding='utf-8') as f:
+    print(f.read())
