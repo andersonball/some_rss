@@ -1,7 +1,27 @@
 import requests
 import xml.etree.ElementTree as ET
 from bs4 import BeautifulSoup
+from urllib.parse import urljoin
 
+# 获取实际新闻 URL
+def fetch_real_news_url(google_news_url):
+    try:
+        response = requests.get(google_news_url)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # 根据网页结构提取实际的新闻 URL
+        for link in soup.find_all('a', href=True):
+            href = link['href']
+            if 'example.com' in href:  # 使用实际新闻源域名替换
+                return urljoin(google_news_url, href)
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching real URL for {google_news_url}: {e}")
+    
+    # 如果未找到实际 URL，返回原 URL
+    return google_news_url
+
+# 从 RSS 中提取和转换链接
 def fetch_and_convert_feed():
     RSS_URL = 'https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans'
     try:
@@ -18,28 +38,39 @@ def fetch_and_convert_feed():
         return []
 
     items = []
+    url_map = {}  # 存储 google.com URL 与实际新闻地址的映射
+
     for item in root.findall('channel/item'):
         title = item.find('title').text if item.find('title') is not None else 'No Title'
         link = item.find('link').text if item.find('link') is not None else 'No Link'
         description = item.find('description').text if item.find('description') is not None else 'No Description'
         pub_date = item.find('pubDate').text if item.find('pubDate') is not None else 'No PubDate'
 
-        # 修改 description 中的链接
-        soup = BeautifulSoup(description, 'html.parser')
-        links = soup.find_all('a', href=True)
-        for link in links:
-            url = link['href']
-            if 'news.google.com' in url:
-                real_url = convert_to_real_url(url)
-                link['href'] = real_url
-        
-        # 确保 <link> 字段中的链接也被替换
+        # 处理 link 和 description 中的 google.com 链接
         if 'news.google.com' in link:
-            link = convert_to_real_url(link)
+            if link not in url_map:
+                real_url = fetch_real_news_url(link)
+                url_map[link] = real_url
+            link = url_map[link]
+        
+        # 处理 description 中的所有链接
+        soup = BeautifulSoup(description, 'html.parser')
+        for a_tag in soup.find_all('a', href=True):
+            url = a_tag['href']
+            if 'news.google.com' in url:
+                if url not in url_map:
+                    real_url = fetch_real_news_url(url)
+                    url_map[url] = real_url
+                a_tag['href'] = url_map[url]
 
         description_modified = str(soup)
+
+        # 处理 title 和 description，确保不含 google.com 和不提及名字
+        title_modified = title.replace('google.com', '').strip()
+        description_modified = description_modified.replace('google.com', '').strip()
+
         items.append({
-            'title': title,
+            'title': title_modified,
             'link': link,
             'description': description_modified,
             'pubDate': pub_date
@@ -47,10 +78,7 @@ def fetch_and_convert_feed():
     
     return items
 
-def convert_to_real_url(url):
-    # 示例替换逻辑，你需要提供实际的转换逻辑
-    return url.replace('news.google.com', 'real-news-source.com')  # 示例替换逻辑
-
+# 创建新的 RSS feed 文件
 def create_new_feed(items, filename='feed.xml'):
     with open(filename, 'w', encoding='utf-8') as file:
         file.write("""<?xml version="1.0" encoding="UTF-8"?>
