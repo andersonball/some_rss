@@ -5,48 +5,6 @@ from xml.sax.saxutils import escape
 # 中文 RSS 源地址
 RSS_URL = 'https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans'
 
-# 定义替换链接的函数
-def replace_google_links(original_link):
-    """
-    将谷歌新闻的链接替换为实际目标地址。
-    使用预定义的替换规则或生成目标链接。
-    """
-    # 替换规则示例（请根据实际情况修改）
-    replacement_dict = {
-        'https://news.google.com/rss/articles/': 'https://targetdomain.com/articles/',  # 示例替换规则
-        # 根据实际需要添加更多的替换规则
-    }
-    for key, value in replacement_dict.items():
-        if original_link.startswith(key):
-            # 如果找到匹配的前缀，进行替换
-            return original_link.replace(key, value)
-    return original_link
-
-def replace_google_in_description(description):
-    """
-    替换 description 中的 Google 链接为目标链接，并去掉 CDATA 结束标记 ']]>'.
-    """
-    # 替换 Google 链接
-    replacement_dict = {
-        'https://news.google.com/rss/articles/': 'https://targetdomain.com/articles/',  # 示例替换规则
-        # 根据实际需要添加更多的替换规则
-    }
-    for key, value in replacement_dict.items():
-        description = description.replace(key, value)
-    
-    # 去掉 CDATA 区域结尾的 ']]>'
-    if description.endswith(']]>'):
-        description = description[:-3]
-    
-    return escape(description)
-
-# 请求 RSS 源
-response = requests.get(RSS_URL)
-response.raise_for_status()  # 确保请求成功
-
-# 解析 RSS XML
-root = ET.fromstring(response.content)
-
 def escape_xml_chars(data):
     """ 转义 XML 中的特殊字符 """
     return escape(data)
@@ -67,19 +25,22 @@ def create_feed(items, filename='feed.xml'):
         for item in items:
             # 获取每个字段的内容，处理可能的缺失值
             title = escape_xml_chars(item.find('title').text or '')
-            link = replace_google_links(item.find('link').text or '')
+            link = item.find('link').text or ''
             description = item.find('description').text or ''
             pub_date = item.find('pubDate').text if item.find('pubDate') is not None else '无日期'
 
-            # 替换 description 内容中的 Google 链接，并清理 CDATA 内容
-            description_cleaned = replace_google_in_description(description)
+            # 直接使用原始的新闻链接
+            link = escape_xml_chars(link)
+
+            # 处理描述中的特殊字符（可能包含 HTML 标记）
+            description = escape_xml_chars(description)
 
             # 写入每个 item
             file.write(f"""
     <item>
       <title>{title}</title>
       <link>{link}</link>
-      <description>{description_cleaned}</description>
+      <description>{description}</description>
       <pubDate>{pub_date}</pubDate>
     </item>
 """)
@@ -87,6 +48,13 @@ def create_feed(items, filename='feed.xml'):
         file.write("""
   </channel>
 </rss>""")
+
+# 请求 RSS 源
+response = requests.get(RSS_URL)
+response.raise_for_status()  # 确保请求成功
+
+# 解析 RSS XML
+root = ET.fromstring(response.content)
 
 # 获取 RSS 频道中的项
 items = root.find('channel').findall('item')
