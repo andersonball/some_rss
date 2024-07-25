@@ -26,6 +26,7 @@ def create_feed(items, filename='feed.xml'):
     <atom:link href="https://andersonball.github.io/some_rss/feed.xml" rel="self" type="application/rss+xml" />
 """)
         for item in items:
+            # 获取每个字段的内容，处理可能的缺失值
             title = escape(item.find('title').text or '')
             link = escape(item.find('link').text or '')
             description = item.find('description').text or ''
