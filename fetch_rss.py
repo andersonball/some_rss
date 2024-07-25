@@ -1,80 +1,82 @@
-import xml.etree.ElementTree as ET
 import requests
+import xml.etree.ElementTree as ET
 from bs4 import BeautifulSoup
-from urllib.parse import urlparse, urljoin
 
-def fetch_feed(url):
-    response = requests.get(url)
-    response.raise_for_status()
-    return response.content
+def fetch_and_convert_feed():
+    RSS_URL = 'https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans'
+    try:
+        response = requests.get(RSS_URL)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching RSS feed: {e}")
+        return []
 
-def extract_google_news_links(xml_content):
-    tree = ET.ElementTree(ET.fromstring(xml_content))
-    root = tree.getroot()
-    
-    google_news_links = set()
-    for item in root.findall('.//item'):
-        link_elem = item.find('link')
-        if link_elem is not None:
-            url = link_elem.text
+    try:
+        root = ET.fromstring(response.content)
+    except ET.ParseError as e:
+        print(f"Error parsing RSS XML: {e}")
+        return []
+
+    items = []
+    for item in root.findall('channel/item'):
+        title = item.find('title').text if item.find('title') is not None else 'No Title'
+        link = item.find('link').text if item.find('link') is not None else 'No Link'
+        description = item.find('description').text if item.find('description') is not None else 'No Description'
+        pub_date = item.find('pubDate').text if item.find('pubDate') is not None else 'No PubDate'
+
+        # 提取实际链接并修改描述内容
+        soup = BeautifulSoup(description, 'html.parser')
+        links = soup.find_all('a', href=True)
+        for link in links:
+            url = link['href']
             if 'news.google.com' in url:
-                google_news_links.add(url)
-    return google_news_links
-
-def fetch_real_news_url(google_news_url):
-    # 发起请求
-    response = requests.get(google_news_url)
-    response.raise_for_status()
-    soup = BeautifulSoup(response.text, 'html.parser')
+                real_url = convert_to_real_url(url)
+                link['href'] = real_url
+        
+        description_modified = str(soup)
+        items.append({
+            'title': title,
+            'link': link,
+            'description': description_modified,
+            'pubDate': pub_date
+        })
     
-    # 示例: 假设真实新闻源地址在 <a> 标签中，通常新闻页面会有这样的链接
-    # 这个具体的解析逻辑需要根据实际网页结构调整
-    for link in soup.find_all('a'):
-        href = link.get('href')
-        if href and 'example.com' in href:
-            return urljoin(google_news_url, href)
-    
-    # 如果未找到真实 URL，返回原 URL
-    return google_news_url
+    return items
 
-def replace_links_in_feed(xml_content, url_map):
-    tree = ET.ElementTree(ET.fromstring(xml_content))
-    root = tree.getroot()
+def convert_to_real_url(url):
+    # 在此函数中进行实际链接转换的逻辑
+    # 示例替换逻辑
+    return url.replace('news.google.com', 'real-news-source.com')  # 示例替换逻辑
 
-    for item in root.findall('.//item'):
-        link_elem = item.find('link')
-        if link_elem is not None:
-            old_url = link_elem.text
-            new_url = url_map.get(old_url, old_url)
-            link_elem.text = new_url
+def create_new_feed(items, filename='feed.xml'):
+    with open(filename, 'w', encoding='utf-8') as file:
+        file.write("""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Updated News Feed</title>
+    <link>https://example.com/feed</link>
+    <description>Updated news feed with real links</description>
+""")
+        for item in items:
+            file.write(f"""
+    <item>
+      <title>{item['title']}</title>
+      <link>{item['link']}</link>
+      <description><![CDATA[{item['description']}]]></description>
+      <pubDate>{item['pubDate']}</pubDate>
+    </item>
+""")
+        file.write("""
+  </channel>
+</rss>""")
+    print(f"New feed created and saved as {filename}")
 
-    return ET.tostring(root, encoding='utf-8', xml_declaration=True)
+def main():
+    items = fetch_and_convert_feed()
+    if items:
+        create_new_feed(items)
+    else:
+        print("No items fetched or converted. Feed creation aborted.")
 
-def save_feed(xml_content, output_file):
-    with open(output_file, 'wb') as f:
-        f.write(xml_content)
-
-def main(feed_url, output_file):
-    # 获取原始 feed.xml 内容
-    xml_content = fetch_feed(feed_url)
-    
-    # 提取谷歌新闻链接
-    google_news_links = extract_google_news_links(xml_content)
-    
-    # 构建 URL 映射表
-    url_map = {}
-    for url in google_news_links:
-        real_url = fetch_real_news_url(url)
-        url_map[url] = real_url
-    
-    # 替换链接
-    updated_xml_content = replace_links_in_feed(xml_content, url_map)
-    
-    # 保存新的 feed.xml
-    save_feed(updated_xml_content, output_file)
-    print(f"Updated feed saved as {output_file}")
-
-# 使用示例
-feed_url = 'https://example.com/feed.xml'  # 输入你实际的 feed.xml URL
-output_file = 'new-feed.xml'
-main(feed_url, output_file)
+if __name__ == "__main__":
+    main()
