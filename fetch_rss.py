@@ -10,16 +10,26 @@ def escape_xml_chars(data):
     """ 转义 XML 中的特殊字符 """
     return escape(data)
 
+def extract_actual_link_from_google(url):
+    """ 从 Google News 链接中提取实际的新闻源链接 """
+    try:
+        # 访问 Google News 链接并获取最终的重定向地址
+        response = requests.get(url, allow_redirects=True)
+        # 返回最终重定向的 URL
+        return response.url
+    except requests.RequestException as e:
+        print(f"请求链接失败: {e}")
+        return url  # 如果出现错误，返回原始链接
+
 def extract_actual_link(description):
-    """ 从 description 中提取实际的新闻链接 """
+    """ 从 description 中提取 Google News 链接并转换为实际的新闻源链接 """
     soup = BeautifulSoup(description, 'lxml')
     links = soup.find_all('a')
     for link in links:
         href = link.get('href')
-        # 返回第一个非 Google News 链接
-        if href and not href.startswith('https://news.google.com/'):
-            return href
-    return ''  # 如果没有找到实际链接，返回空字符串
+        if href and href.startswith('https://news.google.com/'):
+            return extract_actual_link_from_google(href)
+    return ''  # 如果没有找到 Google News 链接，返回空字符串
 
 def create_feed(items, filename='feed.xml'):
     """ 创建 feed.xml 文件 """
