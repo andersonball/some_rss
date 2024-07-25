@@ -3,7 +3,7 @@ import xml.etree.ElementTree as ET
 from xml.sax.saxutils import escape
 
 # 中文 RSS 源地址
-RSS_URL = 'https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans'  # 这里的 URL 是合法的，不需要转义
+RSS_URL = 'https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans'
 
 # 请求 RSS 源
 response = requests.get(RSS_URL)
