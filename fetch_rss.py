@@ -3,7 +3,7 @@ import xml.etree.ElementTree as ET
 from xml.sax.saxutils import escape
 
 # 中文 RSS 源地址
-RSS_URL = 'https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans'
+RSS_URL = 'https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans'  # 这里的 URL 是合法的，不需要转义
 
 # 请求 RSS 源
 response = requests.get(RSS_URL)
@@ -17,6 +17,11 @@ def escape_cdata(data):
     # 替换 CDATA 中的 "]]>" 为 "]]]]><![CDATA[>"
     return data.replace(']]>', ']]]]><![CDATA[>')
 
+def escape_xml_chars(data):
+    """ 转义 XML 中的特殊字符 """
+    # 使用 xml.sax.saxutils.escape 来转义字符
+    return escape(data)
+
 # 创建 feed.xml 文件
 def create_feed(items, filename='feed.xml'):
     feed_url = 'https://andersonball.github.io/some_rss/feed.xml'  # 替换为你自己的 feed URL
@@ -26,30 +31,25 @@ def create_feed(items, filename='feed.xml'):
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Gooooo News Feed - 中文</title>
-    <link>https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans</link>
+    <link>{feed_url}</link>
     <description>Google 新闻中文最新头条</description>
-    <atom:link href="https://andersonball.github.io/some_rss/feed.xml" rel="self" type="application/rss+xml" />
-""")
+    <atom:link href="{feed_url}" rel="self" type="application/rss+xml" />
+""".format(feed_url=escape_xml_chars(feed_url)))
         for item in items:
             # 获取每个字段的内容，处理可能的缺失值
-            title = escape(item.find('title').text or '')
-            link = escape(item.find('link').text or '')
+            title = escape_xml_chars(item.find('title').text or '')
             description = item.find('description').text or ''
             pub_date = item.find('pubDate').text if item.find('pubDate') is not None else '无日期'
-            guid = escape(item.find('link').text or '')
 
             # 使用 CDATA 区域包裹 description，以避免处理其中的特殊字符
-            # 确保 description 中的特殊字符不引起解析问题
             description_cdata = escape_cdata(f"<![CDATA[{description}]]>")
 
-            # 写入每个 item
+            # 写入每个 item，去掉 <link> 和 <guid> 标签
             file.write(f"""
     <item>
       <title>{title}</title>
-      <link>{link}</link>
       <description>{description_cdata}</description>
       <pubDate>{pub_date}</pubDate>
-      <guid>{guid}</guid>
     </item>
 """)
         # 结束 XML 文件
