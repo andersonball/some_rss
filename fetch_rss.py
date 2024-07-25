@@ -2,6 +2,7 @@ import requests
 import xml.etree.ElementTree as ET
 from xml.sax.saxutils import escape
 from bs4 import BeautifulSoup
+from urllib.parse import urlparse, parse_qs
 
 # 中文 RSS 源地址
 RSS_URL = 'https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans'
@@ -10,8 +11,8 @@ def escape_xml_chars(data):
     """ 转义 XML 中的特殊字符 """
     return escape(data)
 
-def extract_actual_link_from_google(url):
-    """ 从 Google News 链接中提取实际的新闻源链接 """
+def get_redirected_url(url):
+    """ 从 Google News 链接中获取实际的新闻源链接 """
     try:
         # 访问 Google News 链接并获取最终的重定向地址
         response = requests.get(url, allow_redirects=True)
@@ -27,8 +28,8 @@ def extract_actual_link(description):
     links = soup.find_all('a')
     for link in links:
         href = link.get('href')
-        if href and href.startswith('https://news.google.com/'):
-            return extract_actual_link_from_google(href)
+        if href and href.startswith('https://news.google.com/rss/articles/'):
+            return get_redirected_url(href)
     return ''  # 如果没有找到 Google News 链接，返回空字符串
 
 def create_feed(items, filename='feed.xml'):
