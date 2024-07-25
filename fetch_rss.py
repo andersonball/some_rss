@@ -24,7 +24,7 @@ def fetch_and_convert_feed():
         description = item.find('description').text if item.find('description') is not None else 'No Description'
         pub_date = item.find('pubDate').text if item.find('pubDate') is not None else 'No PubDate'
 
-        # 提取实际链接并修改描述内容
+        # 修改 description 中的链接
         soup = BeautifulSoup(description, 'html.parser')
         links = soup.find_all('a', href=True)
         for link in links:
@@ -33,6 +33,10 @@ def fetch_and_convert_feed():
                 real_url = convert_to_real_url(url)
                 link['href'] = real_url
         
+        # 确保 <link> 字段中的链接也被替换
+        if 'news.google.com' in link:
+            link = convert_to_real_url(link)
+
         description_modified = str(soup)
         items.append({
             'title': title,
@@ -44,8 +48,7 @@ def fetch_and_convert_feed():
     return items
 
 def convert_to_real_url(url):
-    # 在此函数中进行实际链接转换的逻辑
-    # 示例替换逻辑
+    # 示例替换逻辑，你需要提供实际的转换逻辑
     return url.replace('news.google.com', 'real-news-source.com')  # 示例替换逻辑
 
 def create_new_feed(items, filename='feed.xml'):
