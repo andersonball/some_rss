@@ -1,6 +1,7 @@
 import requests
 import xml.etree.ElementTree as ET
 from xml.sax.saxutils import escape
+from bs4 import BeautifulSoup
 
 # 中文 RSS 源地址
 RSS_URL = 'https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans'
@@ -8,6 +9,16 @@ RSS_URL = 'https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans'
 def escape_xml_chars(data):
     """ 转义 XML 中的特殊字符 """
     return escape(data)
+
+def extract_actual_link(description):
+    """ 从 description 中提取实际的新闻链接 """
+    soup = BeautifulSoup(description, 'html.parser')
+    links = soup.find_all('a')
+    for link in links:
+        href = link.get('href')
+        if href and not href.startswith('https://news.google.com/'):
+            return href
+    return ''
 
 # 创建 feed.xml 文件
 def create_feed(items, filename='feed.xml'):
@@ -29,8 +40,10 @@ def create_feed(items, filename='feed.xml'):
             description = item.find('description').text or ''
             pub_date = item.find('pubDate').text if item.find('pubDate') is not None else '无日期'
 
-            # 直接使用原始的新闻链接
-            link = escape_xml_chars(link)
+            # 尝试从 description 中提取实际新闻链接
+            actual_link = extract_actual_link(description)
+            if actual_link:
+                link = actual_link
 
             # 处理描述中的特殊字符（可能包含 HTML 标记）
             description = escape_xml_chars(description)
