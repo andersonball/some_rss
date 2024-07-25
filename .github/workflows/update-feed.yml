@@ -38,9 +38,9 @@ jobs:
       run: |
         python3 fetch_rss.py
 
-    - name: Wait for file to be written
+    - name: Validate feed.xml
       run: |
-        sleep 5  # 暂停 5 秒
+        xmllint --noout feed.xml  # 验证生成的 feed.xml 文件是否有效
 
     - name: Run process_feed.py
       run: |
