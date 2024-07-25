@@ -3,7 +3,7 @@ import xml.etree.ElementTree as ET
 from xml.sax.saxutils import escape
 
 # 中文 RSS 源地址
-RSS_URL = 'https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans'  # 这里的 URL 是合法的，不需要转义
+RSS_URL = 'https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans'
 
 # 请求 RSS 源
 response = requests.get(RSS_URL)
@@ -12,14 +12,8 @@ response.raise_for_status()  # 确保请求成功
 # 解析 RSS XML
 root = ET.fromstring(response.content)
 
-def escape_cdata(data):
-    """ 处理可能的 CDATA 区域中的特殊字符 """
-    # 替换 CDATA 中的 "]]>" 为 "]]]]><![CDATA[>"
-    return data.replace(']]>', ']]]]><![CDATA[>')
-
 def escape_xml_chars(data):
     """ 转义 XML 中的特殊字符 """
-    # 使用 xml.sax.saxutils.escape 来转义字符
     return escape(data)
 
 # 创建 feed.xml 文件
@@ -38,17 +32,19 @@ def create_feed(items, filename='feed.xml'):
         for item in items:
             # 获取每个字段的内容，处理可能的缺失值
             title = escape_xml_chars(item.find('title').text or '')
+            link = escape_xml_chars(item.find('link').text or '')
             description = item.find('description').text or ''
             pub_date = item.find('pubDate').text if item.find('pubDate') is not None else '无日期'
 
-            # 使用 CDATA 区域包裹 description，以避免处理其中的特殊字符
-            description_cdata = escape_cdata(f"<![CDATA[{description}]]>")
+            # 转义 description 内容中的特殊字符，而不使用 CDATA 区域
+            description_escaped = escape_xml_chars(description)
 
-            # 写入每个 item，去掉 <link> 和 <guid> 标签
+            # 写入每个 item
             file.write(f"""
     <item>
       <title>{title}</title>
-      <description>{description_cdata}</description>
+      <link>{link}</link>
+      <description>{description_escaped}</description>
       <pubDate>{pub_date}</pubDate>
     </item>
 """)
