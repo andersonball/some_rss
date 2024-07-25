@@ -39,7 +39,7 @@ def create_new_feed(items, filename='feed.xml'):
         file.write("""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
-    <title>Updated News Feed</title>
+    <title>Some_RSS</title>
     <link>https://example.com/feed</link>
     <description>Updated news feed with original links</description>
 """)
