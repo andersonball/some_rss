@@ -12,7 +12,7 @@ def escape_xml_chars(data):
 
 def extract_actual_link(description):
     """ 从 description 中提取实际的新闻链接 """
-    soup = BeautifulSoup(description, 'html.parser')
+    soup = BeautifulSoup(description, 'lxml')
     links = soup.find_all('a')
     for link in links:
         href = link.get('href')
@@ -62,17 +62,21 @@ def create_feed(items, filename='feed.xml'):
   </channel>
 </rss>""")
 
-# 请求 RSS 源
-response = requests.get(RSS_URL)
-response.raise_for_status()  # 确保请求成功
+try:
+    # 请求 RSS 源
+    response = requests.get(RSS_URL)
+    response.raise_for_status()  # 确保请求成功
 
-# 解析 RSS XML
-root = ET.fromstring(response.content)
+    # 解析 RSS XML
+    root = ET.fromstring(response.content)
 
-# 获取 RSS 频道中的项
-items = root.find('channel').findall('item')
-create_feed(items)
+    # 获取 RSS 频道中的项
+    items = root.find('channel').findall('item')
+    create_feed(items)
 
-print("feed.xml 文件已生成，内容如下：")
-with open('feed.xml', 'r', encoding='utf-8') as f:
-    print(f.read())
+    print("feed.xml 文件已生成，内容如下：")
+    with open('feed.xml', 'r', encoding='utf-8') as f:
+        print(f.read())
+
+except Exception as e:
+    print(f"出现错误: {e}")
