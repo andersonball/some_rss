@@ -11,15 +11,34 @@ def replace_google_links(original_link):
     将谷歌新闻的链接替换为实际目标地址。
     使用预定义的替换规则或生成目标链接。
     """
+    # 替换规则示例（请根据实际情况修改）
     replacement_dict = {
         'https://news.google.com/rss/articles/': 'https://targetdomain.com/articles/',  # 示例替换规则
-        # 可以根据实际需要添加更多的替换规则
+        # 根据实际需要添加更多的替换规则
     }
     for key, value in replacement_dict.items():
         if original_link.startswith(key):
             # 如果找到匹配的前缀，进行替换
             return original_link.replace(key, value)
     return original_link
+
+def replace_google_in_description(description):
+    """
+    替换 description 中的 Google 链接为目标链接，并去掉 CDATA 结束标记 ']]>'.
+    """
+    # 替换 Google 链接
+    replacement_dict = {
+        'https://news.google.com/rss/articles/': 'https://targetdomain.com/articles/',  # 示例替换规则
+        # 根据实际需要添加更多的替换规则
+    }
+    for key, value in replacement_dict.items():
+        description = description.replace(key, value)
+    
+    # 去掉 CDATA 区域结尾的 ']]>'
+    if description.endswith(']]>'):
+        description = description[:-3]
+    
+    return escape(description)
 
 # 请求 RSS 源
 response = requests.get(RSS_URL)
@@ -52,15 +71,15 @@ def create_feed(items, filename='feed.xml'):
             description = item.find('description').text or ''
             pub_date = item.find('pubDate').text if item.find('pubDate') is not None else '无日期'
 
-            # 转义 description 内容中的特殊字符
-            description_escaped = escape_xml_chars(description)
+            # 替换 description 内容中的 Google 链接，并清理 CDATA 内容
+            description_cleaned = replace_google_in_description(description)
 
             # 写入每个 item
             file.write(f"""
     <item>
       <title>{title}</title>
       <link>{link}</link>
-      <description>{description_escaped}</description>
+      <description>{description_cleaned}</description>
       <pubDate>{pub_date}</pubDate>
     </item>
 """)
